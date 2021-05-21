@@ -6,6 +6,7 @@ from utils import save_checkpoint
 from evaluation import *
 import numpy as np
 import json
+import copy
 from torchvision.utils import make_grid, save_image
 
 
@@ -149,9 +150,18 @@ def train(dataloader, val_loader, disc, gen, disc_opt, gen_opt, criterion, args,
             disc_opt.step()
 
             gen_opt.zero_grad()
+            ori_disc = copy.deepcopy(disc)
+            for _ in range(args.unrolled_steps):
+                disc_opt.zero_grad()
+                disc_loss = get_disc_loss(gen, disc, criterion, real, cur_batch_size, z_dim, device)
+                disc_loss.backward()
+                disc_opt.step()
             gen_loss = get_gen_loss(gen, disc, criterion, cur_batch_size, z_dim, device)
             gen_loss.backward()
             gen_opt.step()
+
+            disc.load_state_dict(ori_disc.state_dict())
+            del ori_disc
 
             mean_discriminator_loss += disc_loss.item() / num_batch
             mean_generator_loss += gen_loss.item() / num_batch
@@ -221,68 +231,6 @@ def evaluate(val_loader, global_epoch, args, gen, disc, criterion, device):
     with logs_file.open('w') as f:
         json.dump(logs, f, indent=4, sort_keys=True)
 
-"""
-def d_unrolled_loop(d_gen_input=None):
-    # 1. Train D on real+fake
-    d_optimizer.zero_grad()
-
-    #  1A: Train D on real
-    d_real_data = torch.from_numpy(dset.sample(minibatch_size))
-    if cuda:
-        d_real_data = d_real_data.cuda()
-    d_real_decision = D(d_real_data)
-    target = torch.ones_like(d_real_decision)
-    if cuda:
-        target = target.cuda()
-    d_real_error = criterion(d_real_decision, target)  # ones = true
-
-    #  1B: Train D on fake
-    if d_gen_input is None:
-        d_gen_input = torch.from_numpy(noise_sampler(minibatch_size, g_inp))
-    if cuda:
-        d_gen_input = d_gen_input.cuda()
-
-    with torch.no_grad():
-        d_fake_data = G(d_gen_input)
-    d_fake_decision = D(d_fake_data)
-    target = torch.zeros_like(d_fake_decision)
-    if cuda:
-        target = target.cuda()
-    d_fake_error = criterion(d_fake_decision, target)  # zeros = fake
-
-    d_loss = d_real_error + d_fake_error
-    d_loss.backward(create_graph=True)
-    d_optimizer.step()  # Only optimizes D's parameters; changes based on stored gradients from backward()
-    return d_real_error.cpu().item(), d_fake_error.cpu().item()
-
-
-def g_loop():
-    # 2. Train G on D's response (but DO NOT train D on these labels)
-    g_optimizer.zero_grad()
-
-    gen_input = torch.from_numpy(noise_sampler(minibatch_size, g_inp))
-    if cuda:
-        gen_input = gen_input.cuda()
-
-    if unrolled_steps > 0:
-        backup = copy.deepcopy(D)
-        for i in range(unrolled_steps):
-            d_unrolled_loop(d_gen_input=gen_input)
-
-    g_fake_data = G(gen_input)
-    dg_fake_decision = D(g_fake_data)
-    target = torch.ones_like(dg_fake_decision)
-    if cuda:
-        target = target.cuda()
-    g_error = criterion(dg_fake_decision, target)  # we want to fool, so pretend it's all genuine
-    g_error.backward()
-    g_optimizer.step()  # Only optimizes G's parameters
-
-    if unrolled_steps > 0:
-        D.load(backup)
-        del backup
-    return g_error.cpu().item()
-"""
 
 if __name__ == '__main__':
     net_g = Generator(64, 3, 64)
