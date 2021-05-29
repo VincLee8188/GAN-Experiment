@@ -99,7 +99,7 @@ def get_gen_loss(gen, disc, criterion, num_images, z_dim, device):
 
 
 def train(dataloader, val_loader, disc, gen, disc_opt, gen_opt, criterion, args, device, ori_epoch):
-    # Initialize parameters
+    # Initialize variables
     n_epochs, z_dim, display_step = args.n_epochs, args.z_dim, args.display_step
     global_epoch = ori_epoch
     cur_step = 0

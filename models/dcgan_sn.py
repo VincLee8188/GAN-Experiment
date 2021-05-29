@@ -2,21 +2,11 @@ import torch
 from torch import nn
 from tqdm.auto import tqdm
 from pathlib import Path as P
-from utils import save_checkpoint
+from utils import save_checkpoint, save_tensor_images
 from evaluation import *
 import numpy as np
 from .spectral_normalization import SpectralNorm
 import json
-from torchvision.utils import make_grid, save_image
-
-
-def save_tensor_images(image_tensor, checkpoint_dir, epoch, num_images=16, size=(3, 32, 32), prefix='train', label='real'):
-    image_tensor = (image_tensor + 1) / 2
-    image_unflat = image_tensor.detach().cpu()
-    folder = P(checkpoint_dir) / 'samples_epoch{:05d}'.format(epoch)
-    folder.mkdir(exist_ok=True)
-    for i in range(len(image_unflat) // num_images):
-        save_image(make_grid(image_unflat[i*num_images:(i+1)*num_images], nrow=4), folder / f'{prefix}_{i}_{label}.jpg')
 
 
 class Generator(nn.Module):

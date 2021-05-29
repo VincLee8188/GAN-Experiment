@@ -1,12 +1,21 @@
 import torch
-from torch import nn
 from pathlib import Path as P
+from torchvision.utils import make_grid, save_image
 
 
 def write_config_to_file(config, save_path):
     with open(P(save_path) / 'config.txt', 'w') as file:
         for arg in vars(config):
             file.write(str(arg) + ': ' + str(getattr(config, arg)) + '\n')
+
+
+def save_tensor_images(image_tensor, checkpoint_dir, epoch, num_images=16, size=(3, 32, 32), prefix='train', label='real'):
+    image_tensor = (image_tensor + 1) / 2
+    image_unflat = image_tensor.detach().cpu()
+    folder = P(checkpoint_dir) / 'samples_epoch{:05d}'.format(epoch)
+    folder.mkdir(exist_ok=True)
+    for i in range(len(image_unflat) // num_images):
+        save_image(make_grid(image_unflat[i*num_images:(i+1)*num_images], nrow=4), folder / f'{prefix}_{i}_{label}.jpg')
 
 
 def save_checkpoint(checkpoint_dir, disc, gen, opt_d, opt_g, epoch, prefix=''):

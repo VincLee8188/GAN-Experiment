@@ -2,21 +2,11 @@ import torch
 from torch import nn
 from tqdm.auto import tqdm
 from pathlib import Path as P
-from utils import save_checkpoint
+from utils import save_checkpoint, save_tensor_images
 from evaluation import *
 import numpy as np
 import json
 import copy
-from torchvision.utils import make_grid, save_image
-
-
-def save_tensor_images(image_tensor, checkpoint_dir, epoch, num_images=16, size=(3, 32, 32), prefix='train', label='real'):
-    image_tensor = (image_tensor + 1) / 2
-    image_unflat = image_tensor.detach().cpu()
-    folder = P(checkpoint_dir) / 'samples_epoch{:05d}'.format(epoch)
-    folder.mkdir(exist_ok=True)
-    for i in range(len(image_unflat) // num_images):
-        save_image(make_grid(image_unflat[i*num_images:(i+1)*num_images], nrow=4), folder / f'{prefix}_{i}_{label}.jpg')
 
 
 class Generator(nn.Module):
@@ -117,6 +107,18 @@ def get_disc_loss(gen, disc, criterion, real, num_images, z_dim, device):
     return disc_loss
 
 
+def get_disc_unrolled_loss(disc, criterion, real, fake):
+    d_real = disc(real)
+    real_truth = torch.ones_like(d_real)
+    loss_real = criterion(d_real, real_truth)
+
+    d_g_z = disc(fake)
+    fake_truth = torch.zeros_like(d_g_z)
+    loss_fake = criterion(d_g_z, fake_truth)
+
+    disc_loss = (loss_fake + loss_real) / 2
+    return disc_loss
+
 def get_gen_loss(gen, disc, criterion, num_images, z_dim, device):
     z = get_noise(num_images, z_dim, device)
     g_z = gen(z)
@@ -149,23 +151,31 @@ def train(dataloader, val_loader, disc, gen, disc_opt, gen_opt, criterion, args,
             disc_loss.backward()
             disc_opt.step()
 
-            gen_opt.zero_grad()
             ori_disc = copy.deepcopy(disc)
+            ori_disc_opt = copy.deepcopy(disc_opt)
+            gen_opt.zero_grad()
+            z = get_noise(cur_batch_size, z_dim, device)
+            fake = gen(z)
             for _ in range(args.unrolled_steps):
                 disc_opt.zero_grad()
-                disc_loss = get_disc_loss(gen, disc, criterion, real, cur_batch_size, z_dim, device)
+                disc_loss = get_disc_unrolled_loss(disc, criterion, real, fake.detach())
                 disc_loss.backward()
                 disc_opt.step()
-            gen_loss = get_gen_loss(gen, disc, criterion, cur_batch_size, z_dim, device)
+            d_g_z = disc(fake)
+            ground_truth = torch.ones_like(d_g_z)
+            gen_loss = criterion(d_g_z, ground_truth)
             gen_loss.backward()
             gen_opt.step()
 
             disc.load_state_dict(ori_disc.state_dict())
-            del ori_disc
+            disc_opt.load_state_dict(ori_disc_opt.state_dict())
+            del ori_disc, ori_disc_opt
 
             mean_discriminator_loss += disc_loss.item() / num_batch
             mean_generator_loss += gen_loss.item() / num_batch
             cur_step += 1
+
+
         print(f'Epoch {epoch}, step {cur_step}: Generator loss: {mean_generator_loss}, '
               f'Discriminator loss:  {mean_discriminator_loss}')
 
