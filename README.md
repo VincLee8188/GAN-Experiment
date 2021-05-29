@@ -18,7 +18,7 @@
 [comment]: <> (```)
 
 ## Reference
-- A good [tutorial](thttps://www.kaggle.com/ibtesama/gan-in-pytorch-with-fid/notebook#Fretchet-Inception-Distance) for GAN beginners.
+- A good [tutorial](https://www.kaggle.com/ibtesama/gan-in-pytorch-with-fid/notebook#Fretchet-Inception-Distance) for GAN beginners.
 - The calculation of Inception Score is borrowed from this [repository](https://github.com/sbarratt/inception-score-pytorch).
 - The calculation of FID is borrowed from this [repository](https://github.com/mseitzer/pytorch-fid).
 - The implementation of self-attention is borrowed from this [repository](https://github.com/heykeetae/Self-Attention-GAN), 
