@@ -1,5 +1,8 @@
 # GAN-Experiment
 
+## Usage
+` python main.py --checkpoint_dir checkpoint --model dcgan --dataset MNIST --device 0`
+
 ## TO DO
 - Add support for CelebA and LSUN dataset.
 - Tensorboard to visualize the training process and generated images
