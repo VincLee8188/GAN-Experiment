@@ -156,6 +156,8 @@ def train(dataloader, val_loader, disc, gen, disc_opt, gen_opt, args, device, or
         epoch = cur_epoch + global_epoch
         print('\nStarting Epoch: {}'.format(epoch))
         num_batch = len(dataloader)
+        disc.train()
+        gen.train()
         for real, _ in tqdm(dataloader):
             cur_batch_size = len(real)
             real = real.to(device)
@@ -192,6 +194,8 @@ def evaluate(val_loader, global_epoch, args, gen, disc, device):
     running_disc_loss = []
     running_gen_loss = []
     g_feats, gt_feats = [], []
+    disc.eval()
+    gen.eval()
 
     for real, _ in val_loader:
         cur_batch_size = len(real)
