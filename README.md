@@ -1,6 +1,7 @@
 # 代码说明
-在原有代码的基础上进行了少许优化，可以训练生成动漫头像。
-![train_0_fake](https://user-images.githubusercontent.com/55343399/149714459-b9cb436d-28da-43a0-97a5-74940c0ced99.jpg)
+在原有代码的基础上进行了少许优化，可以训练生成动漫头像，效果如下。
+![train_0_fake]
+![train_0_real]
 
 
 ## 运行说明
