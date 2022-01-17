@@ -1,4 +1,5 @@
 # 代码说明
+在原有代码的基础上进行了少许优化，可以训练生成动漫头像。
 
 ## 运行说明
 ` python main.py --checkpoint_dir checkpoint_dcgan --model dcgan --dataset ANIME-face --device 0`
@@ -37,10 +38,3 @@
 - utils.py：保存训练结果
 
 - draw_picture.py：训练结果可视化
-
-## 参考代码
-- 基础DCGAN模型参考自(https://www.kaggle.com/ibtesama/gan-in-pytorch-with-fid/notebook#Fretchet-Inception-Distance) 
-- IS值计算参考自(https://github.com/sbarratt/inception-score-pytorch)
-- FID值计算参考自 (https://github.com/mseitzer/pytorch-fid)
-- Self-attention层实现参考自(https://github.com/heykeetae/Self-Attention-GAN)
-- 动漫头像数据集来自(https://download.csdn.net/download/bu_fo/13124205?utm_source=iteye_new)
