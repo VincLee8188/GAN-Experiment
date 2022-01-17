@@ -25,4 +25,4 @@
 - The calculation of Inception Score is borrowed from this [repository](https://github.com/sbarratt/inception-score-pytorch).
 - The calculation of FID is borrowed from this [repository](https://github.com/mseitzer/pytorch-fid).
 - The implementation of self-attention is borrowed from this [repository](https://github.com/heykeetae/Self-Attention-GAN), 
-  and the download script for CelebA and LSUN `download.sh` is also borrowed from it.
+  and the download script for CelebA and LSUN `download.sh` is also borrowed from it. 
