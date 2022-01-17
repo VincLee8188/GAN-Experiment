@@ -1,1 +1,1 @@
-__all__ = ['dcgan', 'dcgan_sn', 'dcgan_un', 'dcgan_sa']
+__all__ = ['gan', 'dcgan', 'dcgan_wl', 'dcgan_sn', 'dcgan_un', 'dcgan_sa']

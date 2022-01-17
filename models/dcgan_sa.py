@@ -10,6 +10,7 @@ from .spectral_normalization import SpectralNorm
 
 
 class SelfAttention(nn.Module):
+    """ Self attention Layer"""
 
     def __init__(self, in_dim):
         super(SelfAttention, self).__init__()
@@ -20,15 +21,22 @@ class SelfAttention(nn.Module):
         self.value_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim, kernel_size=1)
         self.gamma = nn.Parameter(torch.zeros(1))
 
-        self.softmax = nn.Softmax(dim=-1)  
+        self.softmax = nn.Softmax(dim=-1)  #
 
     def forward(self, x):
+        """
+            inputs :
+                x : input feature maps( B X C X W X H)
+            returns :
+                out : self attention value + input feature
+                attention: B X N X N (N is Width*Height)
+        """
         m_batchsize, C, width, height = x.size()
-        proj_query = self.query_conv(x).view(m_batchsize, -1, width * height).permute(0, 2, 1)  
-        proj_key = self.key_conv(x).view(m_batchsize, -1, width * height)  
-        energy = torch.bmm(proj_query, proj_key)  
-        attention = self.softmax(energy)  
-        proj_value = self.value_conv(x).view(m_batchsize, -1, width * height)  
+        proj_query = self.query_conv(x).view(m_batchsize, -1, width * height).permute(0, 2, 1)  # B X CX(N)
+        proj_key = self.key_conv(x).view(m_batchsize, -1, width * height)  # B X C x (*W*H)
+        energy = torch.bmm(proj_query, proj_key)  # transpose check
+        attention = self.softmax(energy)  # BX (N) X (N)
+        proj_value = self.value_conv(x).view(m_batchsize, -1, width * height)  # B X C X N
 
         out = torch.bmm(proj_value, attention.permute(0, 2, 1))
         out = out.view(m_batchsize, C, width, height)
@@ -43,9 +51,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.z_dim = z_dim
         self.gen = nn.Sequential(
-            self.make_gen_block(z_dim, hidden_dim * 8, stride=1, padding=0),
-            self.make_gen_block(hidden_dim * 8, hidden_dim * 4),
-            SelfAttention(hidden_dim * 4),
+            self.make_gen_block(z_dim, hidden_dim * 4, stride=1, padding=0),
             self.make_gen_block(hidden_dim * 4, hidden_dim * 2),
             SelfAttention(hidden_dim * 2),
             self.make_gen_block(hidden_dim * 2, hidden_dim),
@@ -89,9 +95,7 @@ class Discriminator(nn.Module):
             SelfAttention(hidden_dim * 2),
             self.make_disc_block(hidden_dim * 2, hidden_dim * 4),
             SelfAttention(hidden_dim * 4),
-            self.make_disc_block(hidden_dim * 4, hidden_dim * 8),
-            SelfAttention(hidden_dim * 8),
-            self.make_disc_block(hidden_dim * 8, 1, stride=1, padding=0, final_layer=True)
+            self.make_disc_block(hidden_dim * 4, 1, stride=1, padding=0, final_layer=True)
         )
 
     def make_disc_block(self, input_channels, output_channels, kernel_size=4, stride=2, padding=1, final_layer=False):
@@ -166,7 +170,9 @@ def train(dataloader, val_loader, disc, gen, disc_opt, gen_opt, criterion, args,
         epoch = cur_epoch + global_epoch
         print('\nStarting Epoch: {}'.format(epoch))
         num_batch = len(dataloader)
-        for real in tqdm(dataloader):
+        disc.train()
+        gen.train()
+        for real, _ in tqdm(dataloader):
             cur_batch_size = len(real)
             real = real.to(device)
 
@@ -201,17 +207,19 @@ def evaluate(val_loader, global_epoch, args, gen, disc, criterion, device):
     running_disc_loss = []
     running_gen_loss = []
     g_feats, gt_feats = [], []
+    disc.eval()
+    gen.eval()
 
-    for real in val_loader:
+    for real, _ in val_loader:
         cur_batch_size = len(real)
         real = real.to(device)
         fake_noise = get_noise(cur_batch_size, z_dim, device)
         fake = gen(fake_noise)
 
         inception = FID.get_eval_model(device)
-        img_size = (args.channel, args.Size, args.Size)
-        g_feat = inception(fake)[0] 
-        gt_feat = inception(real)[0] 
+        img_size = (args.channel, 32, 32)
+        g_feat = inception(fake)[0] if args.channel == 3 else inception(fake.repeat(1, 3, 1, 1))[0]
+        gt_feat = inception(real)[0] if args.channel == 3 else inception(real.repeat(1, 3, 1, 1))[0]
         g_feats.append(g_feat.cpu().numpy().reshape(g_feat.size(0), -1))
         gt_feats.append(gt_feat.cpu().numpy().reshape(gt_feat.size(0), -1))
 
@@ -230,8 +238,8 @@ def evaluate(val_loader, global_epoch, args, gen, disc, criterion, device):
     print(f'Epoch {global_epoch}: Generator loss: {avg_gen_loss}, '
           f'Discriminator loss:  {avg_disc_loss}, FID: {fid_score}')
 
-    save_tensor_images(fake, checkpoint_dir, global_epoch, label='fake', size=(args.channel, args.Size, args.Size))
-    save_tensor_images(real, checkpoint_dir, global_epoch, size=(args.channel, args.Size, args.Size))
+    save_tensor_images(fake, checkpoint_dir, global_epoch, label='fake', size=(args.channel, 32, 32))
+    save_tensor_images(real, checkpoint_dir, global_epoch, size=(args.channel, 32, 32))
 
     logs_file = P(checkpoint_dir) / 'logs.json'
     if logs_file.is_file():
@@ -250,5 +258,7 @@ def evaluate(val_loader, global_epoch, args, gen, disc, criterion, device):
 
 
 if __name__ == '__main__':
-    gen = Generator(z_dim=100, im_chan=3, hidden_dim=64)
-    print(gen)
+    net_g = Generator(64, 3, 64)
+    net_d = Discriminator(3, 64)
+    print("Generator Parameters:", sum(p.numel() for p in net_g.parameters() if p.requires_grad))
+    print("Discriminator Parameters:", sum(p.numel() for p in net_d.parameters() if p.requires_grad))

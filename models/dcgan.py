@@ -10,19 +10,15 @@ import json
 
 class Generator(nn.Module):
 
-    def __init__(self, z_dim=10, im_chan=1, hidden_dim=64, Size=64):
+    def __init__(self, z_dim=10, im_chan=1, hidden_dim=64):
         super(Generator, self).__init__()
         self.z_dim = z_dim
-        if Size == 64:
-            self.gen = nn.Sequential(
-                self.make_gen_block(z_dim, hidden_dim * 8, stride=1, padding=0),
-                self.make_gen_block(hidden_dim * 8, hidden_dim * 4),
-                self.make_gen_block(hidden_dim * 4, hidden_dim * 2),
-                self.make_gen_block(hidden_dim * 2, hidden_dim),
-                self.make_gen_block(hidden_dim, im_chan, final_layer=True)
-            )
-        else:
-            raise ValueError(f'Wrong Picture Size :{Size}')
+        self.gen = nn.Sequential(
+            self.make_gen_block(z_dim, hidden_dim * 4, stride=1, padding=0),
+            self.make_gen_block(hidden_dim * 4, hidden_dim * 2),
+            self.make_gen_block(hidden_dim * 2, hidden_dim),
+            self.make_gen_block(hidden_dim, im_chan, final_layer=True)
+        )
 
     def make_gen_block(self, input_channels, output_channels, kernel_size=4, stride=2, padding=1, final_layer=False):
         # Build the neural block
@@ -52,18 +48,14 @@ def get_noise(n_samples, z_dim, device='cpu'):
 
 class Discriminator(nn.Module):
 
-    def __init__(self, im_chan=1, hidden_dim=64, Size=64):
+    def __init__(self, im_chan=1, hidden_dim=64):
         super(Discriminator, self).__init__()
-        if Size == 64:
-            self.disc = nn.Sequential(
-                self.make_disc_block(im_chan, hidden_dim),
-                self.make_disc_block(hidden_dim, hidden_dim * 2),
-                self.make_disc_block(hidden_dim * 2, hidden_dim * 4),
-                self.make_disc_block(hidden_dim * 4, hidden_dim * 8),
-                self.make_disc_block(hidden_dim * 8, 1, stride=1, padding=0, final_layer=True)
-            )
-        else:
-            raise ValueError(f'Wrong Picture Size :{Size}')
+        self.disc = nn.Sequential(
+            self.make_disc_block(im_chan, hidden_dim),
+            self.make_disc_block(hidden_dim, hidden_dim * 2),
+            self.make_disc_block(hidden_dim * 2, hidden_dim * 4),
+            self.make_disc_block(hidden_dim * 4, 1, stride=1, padding=0, final_layer=True)
+        )
 
     def make_disc_block(self, input_channels, output_channels, kernel_size=4, stride=2, padding=1, final_layer=False):
         if not final_layer:
@@ -92,11 +84,11 @@ def weight_inits(m):
 
 
 def get_disc_model(args):
-    return Discriminator(im_chan=args.channel, hidden_dim=args.hidden_dim, Size=args.Size)
+    return Discriminator(im_chan=args.channel, hidden_dim=args.hidden_dim)
 
 
 def get_gen_model(args):
-    return Generator(z_dim=args.z_dim, im_chan=args.channel, hidden_dim=args.hidden_dim, Size=args.Size)
+    return Generator(z_dim=args.z_dim, im_chan=args.channel, hidden_dim=args.hidden_dim)
 
 
 def get_disc_loss(gen, disc, criterion, real, num_images, z_dim, device):
@@ -134,10 +126,12 @@ def train(dataloader, val_loader, disc, gen, disc_opt, gen_opt, criterion, args,
     gen.apply(weight_inits)
 
     for cur_epoch in range(args.n_epochs):
+        disc.train()
+        gen.train()
         epoch = cur_epoch + global_epoch
         print('\nStarting Epoch: {}'.format(epoch))
         num_batch = len(dataloader)
-        for real in tqdm(dataloader):
+        for real, _ in tqdm(dataloader):
             cur_batch_size = len(real)
             real = real.to(device)
 
@@ -172,17 +166,19 @@ def evaluate(val_loader, global_epoch, args, gen, disc, criterion, device):
     running_disc_loss = []
     running_gen_loss = []
     g_feats, gt_feats = [], []
+    disc.eval()
+    gen.eval()
 
-    for real in val_loader:
+    for real, _ in tqdm(val_loader):
         cur_batch_size = len(real)
         real = real.to(device)
         fake_noise = get_noise(cur_batch_size, z_dim, device)
         fake = gen(fake_noise)
 
         inception = FID.get_eval_model(device)
-        img_size = (args.channel, args.Size, args.Size)
-        g_feat = inception(fake)[0] 
-        gt_feat = inception(real)[0] 
+        img_size = (args.channel, 32, 32)
+        g_feat = inception(fake)[0] if args.channel == 3 else inception(fake.repeat(1, 3, 1, 1))[0]
+        gt_feat = inception(real)[0] if args.channel == 3 else inception(real.repeat(1, 3, 1, 1))[0]
         g_feats.append(g_feat.cpu().numpy().reshape(g_feat.size(0), -1))
         gt_feats.append(gt_feat.cpu().numpy().reshape(gt_feat.size(0), -1))
 
@@ -201,8 +197,8 @@ def evaluate(val_loader, global_epoch, args, gen, disc, criterion, device):
     print(f'Epoch {global_epoch}: Generator loss: {avg_gen_loss}, '
           f'Discriminator loss:  {avg_disc_loss}, FID: {fid_score}')
 
-    save_tensor_images(fake, checkpoint_dir, global_epoch, label='fake', size=(args.channel, args.Size, args.Size))
-    save_tensor_images(real, checkpoint_dir, global_epoch, size=(args.channel, args.Size, args.Size))
+    save_tensor_images(fake, checkpoint_dir, global_epoch, label='fake', size=(args.channel, 32, 32))
+    save_tensor_images(real, checkpoint_dir, global_epoch, size=(args.channel, 32, 32))
 
     logs_file = P(checkpoint_dir) / 'logs.json'
     if logs_file.is_file():
