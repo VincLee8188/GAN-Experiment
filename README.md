@@ -1,6 +1,6 @@
 # 代码说明
 在原有代码的基础上进行了少许优化，可以训练生成动漫头像，效果如下。
-![train_0_fake](https://github.com/hsj576/GAN-Experiment/train_0_fake.jpg)
+![train_0_fake](https://github.com/hsj576\GAN-Experiment\train_0_fake.jpg)
 ![train_0_real]
 
 
