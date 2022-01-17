@@ -7,8 +7,7 @@
 
 需要将loader.py中的base_dir改为数据集所在地址
 
-动漫头像数据集下载链接：https://disk.pku.edu.cn:443/link/94C9CAD0511AB8A65E8BDB32AAC3D86D
-Valid Until: 2021-07-19 23:59
+动漫头像数据集下载链接：https://pan.baidu.com/s/1VdiYs9TUHZ5dRmO8qv5aJw 密码: 851h
 
 每训练5个epoch保存模型训练结果到checkpoint_dir中，训练情况记录checkpoint_dir/logs.json中，可以运行draw_picture.py查看训练中loss的变化情况。
 
