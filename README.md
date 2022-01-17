@@ -1,5 +1,7 @@
 # 代码说明
 在原有代码的基础上进行了少许优化，可以训练生成动漫头像，效果如下(左为假，右为真)。
+
+
 ![train_0_fake](train_0_fake.jpg)
 ![train_0_real](train_0_real.jpg)
 
