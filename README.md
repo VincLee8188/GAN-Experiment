@@ -1,5 +1,7 @@
 # 代码说明
 在原有代码的基础上进行了少许优化，可以训练生成动漫头像。
+![train_0_fake](https://user-images.githubusercontent.com/55343399/149714459-b9cb436d-28da-43a0-97a5-74940c0ced99.jpg)
+
 
 ## 运行说明
 ` python main.py --checkpoint_dir checkpoint_dcgan --model dcgan --dataset ANIME-face --device 0`
