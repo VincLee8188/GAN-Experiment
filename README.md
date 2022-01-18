@@ -1,7 +1,7 @@
 # GAN-Experiment
 
 ## News
-A [anime branch](https://github.com/VincLee8188/GAN-Experiment/tree/anime) for anime generation is now AVAILABLE!!! It was developed by my friend [hsj](https://github.com/hsj576).
+An [anime branch](https://github.com/VincLee8188/GAN-Experiment/tree/anime) for anime generation is now AVAILABLE!!! It was developed by my friend [hsj](https://github.com/hsj576).
 
 ## Usage
 ` python main.py --checkpoint_dir checkpoint --model dcgan --dataset MNIST --device 0`
